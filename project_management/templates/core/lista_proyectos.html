@@ -1,67 +1,42 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista de Proyectos</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .container {
-            margin-top: 50px;
-        }
-        .card {
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: scale(1.02);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1 class="text-center mb-4">Mis Proyectos</h1>
-        <div class="d-flex justify-content-end mb-3">
-            <a href="{% url 'crear_proyecto' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Crear Nuevo Proyecto
-            </a>
+{% extends 'base.html' %}
+{% block title %}Lista de Proyectos{% endblock %}
+{% block content %}
+    <h1 class="text-center mb-4">Mis Proyectos</h1>
+    {% if user.is_authenticated %}
+        <div class="alert alert-info text-center mb-4">
+            ¡Bienvenido, {{ user.username }}! Aquí están tus proyectos.
         </div>
-        <div class="row">
-            {% for proyecto in proyectos %}
-                <div class="col-md-4 mb-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ proyecto.titulo }}</h5>
-                            <p class="card-text">
-                                <strong>Inicio:</strong> {{ proyecto.fecha_inicio }}<br>
-                                <strong>Fin:</strong> {{ proyecto.fecha_fin }}
-                            </p>
-                            <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-outline-secondary btn-sm">Ver Tareas</a>
-                            <a href="{% url 'editar_proyecto' proyecto.id %}" class="btn btn-outline-warning btn-sm">Editar</a>
-                            <a href="{% url 'mensajes_proyecto' proyecto.id %}" class="btn btn-outline-info btn-sm">Chat</a>
-                            <a href="{% url 'gestionar_grupos' proyecto.id %}" class="btn btn-outline-success btn-sm">Grupos</a>
-                        </div>
-                    </div>
-                </div>
-            {% empty %}
-                <div class="col-12">
-                    <div class="alert alert-info text-center">
-                        No hay proyectos asignados.
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-        <div class="text-center mt-4">
-            <form method="post" action="{% url 'logout' %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger">Cerrar Sesión</button>
-            </form>
-        </div>
+    {% endif %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} text-center">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'crear_proyecto' %}" class="btn btn-primary">Crear Nuevo Proyecto</a>
     </div>
-    <!-- Bootstrap JS (opcional, para componentes interactivos) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-</body>
-</html>
+    <div class="row">
+        {% for proyecto in proyectos %}
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ proyecto.titulo }}</h5>
+                        <p class="card-text">
+                            <strong>Inicio:</strong> {{ proyecto.fecha_inicio }}<br>
+                            <strong>Fin:</strong> {{ proyecto.fecha_fin }}
+                        </p>
+                        <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-outline-secondary btn-sm">Ver Tareas</a>
+                        <a href="{% url 'editar_proyecto' proyecto.id %}" class="btn btn-outline-warning btn-sm">Editar</a>
+                        <a href="{% url 'mensajes_proyecto' proyecto.id %}" class="btn btn-outline-info btn-sm">Mensajes</a>
+                        <a href="{% url 'gestionar_grupos' proyecto.id %}" class="btn btn-outline-success btn-sm">Grupos</a>
+                        <a href="{% url 'eliminar_proyecto' proyecto.id %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center">No hay proyectos asignados.</div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

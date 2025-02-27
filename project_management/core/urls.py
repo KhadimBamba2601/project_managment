@@ -12,4 +12,8 @@ urlpatterns = [
     path('proyectos/<int:proyecto_id>/tareas/<int:tarea_id>/comentarios/', views.comentarios_tarea, name='comentarios_tarea'),
     path('proyectos/<int:proyecto_id>/grupos/', views.gestionar_grupos, name='gestionar_grupos'),
     path('proyectos/<int:proyecto_id>/grupos/<int:grupo_id>/asignar/', views.asignar_usuario_grupo, name='asignar_usuario_grupo'),
+    path('notificaciones/', views.lista_notificaciones, name='lista_notificaciones'),
+    path('usuarios/crear/', views.crear_usuario, name='crear_usuario'),
+    path('proyectos/<int:proyecto_id>/eliminar/', views.eliminar_proyecto, name='eliminar_proyecto'),
+    path('proyectos/<int:proyecto_id>/tareas/<int:tarea_id>/eliminar/', views.eliminar_tarea, name='eliminar_tarea'),
 ]

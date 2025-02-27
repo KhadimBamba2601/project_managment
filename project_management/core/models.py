@@ -74,3 +74,14 @@ class PerfilProyecto(models.Model):
 
     def __str__(self):
         return f"{self.usuario} - {self.rol} en {self.proyecto}"
+    
+# (Otros modelos existentes)
+class Notificacion(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notificaciones')
+    mensaje = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+    leida = models.BooleanField(default=False)
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return f"Notificación para {self.usuario}: {self.mensaje}"
