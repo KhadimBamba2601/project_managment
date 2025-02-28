@@ -7,13 +7,9 @@
             ¡Bienvenido, {{ user.username }}! Aquí están tus proyectos.
         </div>
     {% endif %}
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} text-center">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
     <div class="d-flex justify-content-end mb-3">
-        <a href="{% url 'crear_proyecto' %}" class="btn btn-primary">Crear Nuevo Proyecto</a>
+        <a href="{% url 'crear_proyecto' %}" class="btn btn-primary me-2">Crear Nuevo Proyecto</a>
+        <a href="{% url 'crear_grupo_general' %}" class="btn btn-primary">Crear Grupo</a>
     </div>
     <div class="row">
         {% for proyecto in proyectos %}
@@ -23,12 +19,17 @@
                         <h5 class="card-title">{{ proyecto.titulo }}</h5>
                         <p class="card-text">
                             <strong>Inicio:</strong> {{ proyecto.fecha_inicio }}<br>
-                            <strong>Fin:</strong> {{ proyecto.fecha_fin }}
+                            <strong>Fin:</strong> {{ proyecto.fecha_fin }}<br>
+                            <strong>Grupos:</strong>
+                            {% for grupo in proyecto.grupos.all %}
+                                {{ grupo.nombre }}{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                Ningún grupo asignado
+                            {% endfor %}
                         </p>
                         <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-outline-secondary btn-sm">Ver Tareas</a>
                         <a href="{% url 'editar_proyecto' proyecto.id %}" class="btn btn-outline-warning btn-sm">Editar</a>
                         <a href="{% url 'mensajes_proyecto' proyecto.id %}" class="btn btn-outline-info btn-sm">Mensajes</a>
-                        <a href="{% url 'gestionar_grupos' proyecto.id %}" class="btn btn-outline-success btn-sm">Grupos</a>
                         <a href="{% url 'eliminar_proyecto' proyecto.id %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
                     </div>
                 </div>
@@ -40,3 +41,5 @@
         {% endfor %}
     </div>
 {% endblock %}
+                        
+                        

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Responder Mensaje{% endblock %}
+{% block content %}
+    <h1 class="text-center mb-4">Responder a {{ mensaje_original.remitente.username }}</h1>
+    <div class="container">
+        <div class="card mb-4">
+            <div class="card-body">
+                <p><strong>Mensaje original:</strong> {{ mensaje_original.contenido }}</p>
+                <small class="text-muted">{{ mensaje_original.fecha_hora }}</small>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card p-4 shadow-sm">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success">Enviar</button>
+                            <a href="{% url 'bandeja_entrada' %}" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,17 +1,21 @@
 {% extends 'base.html' %}
-
 {% block title %}Crear Tarea en {{ proyecto.titulo }}{% endblock %}
-
 {% block content %}
-    <div style="max-width: 600px; margin-left: auto; margin-right: auto;">
-        <h1 class="text-center mb-4">Crear Tarea en {{ proyecto.titulo }}</h1>
-        <form method="post" class="card p-4 shadow-sm">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <div class="d-flex justify-content-between">
-                <button type="submit" class="btn btn-success">Guardar</button>
-                <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-secondary">Volver</a>
+    <h1 class="text-center mb-4">Crear Tarea en {{ proyecto.titulo }}</h1>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card p-4 shadow-sm">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success">Guardar</button>
+                            <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-secondary">Volver</a>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 {% endblock %}

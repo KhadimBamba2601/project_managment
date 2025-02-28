@@ -5,69 +5,82 @@ from django.utils.translation import gettext_lazy as _
 from .models import Proyecto, Tarea, Mensaje, Comentario, User, Grupo, PerfilProyecto
 
 class ProyectoForm(forms.ModelForm):
+    grupos = forms.ModelMultipleChoiceField(
+        queryset=Grupo.objects.all(),
+        label="Grupos",
+        help_text="Selecciona al menos un grupo para este proyecto.",
+        required=True,
+        widget=forms.CheckboxSelectMultiple
+    )
+
     class Meta:
         model = Proyecto
-        fields = ['titulo', 'descripcion', 'fecha_inicio', 'fecha_fin']
+        fields = ['titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'grupos']
         widgets = {
             'fecha_inicio': forms.DateInput(attrs={'type': 'date'}),
             'fecha_fin': forms.DateInput(attrs={'type': 'date'}),
         }
-
-    def clean_titulo(self):
-        titulo = self.cleaned_data['titulo']
-        if len(titulo) < 3:
-            raise ValidationError("El título debe tener al menos 3 caracteres.")
-        return titulo
 
     def clean(self):
         cleaned_data = super().clean()
         fecha_inicio = cleaned_data.get('fecha_inicio')
         fecha_fin = cleaned_data.get('fecha_fin')
         if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
-            raise ValidationError("La fecha de fin no puede ser anterior a la fecha de inicio.")
+            raise forms.ValidationError("La fecha de fin no puede ser anterior a la fecha de inicio.")
         return cleaned_data
 
 class TareaForm(forms.ModelForm):
     class Meta:
         model = Tarea
-        fields = ['titulo', 'descripcion', 'fecha_limite', 'estado']
+        fields = ['titulo', 'descripcion', 'fecha_limite', 'estado', 'usuarios_asignados']
         widgets = {
             'fecha_limite': forms.DateInput(attrs={'type': 'date'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        proyecto = kwargs.pop('proyecto', None)  # Recibimos el proyecto desde la vista
+        super().__init__(*args, **kwargs)
+        if proyecto:
+            # Limitar usuarios_asignados a miembros de los grupos del proyecto
+            self.fields['usuarios_asignados'].queryset = User.objects.filter(
+                grupos__proyecto=proyecto
+            ).distinct()
+
     def clean_titulo(self):
         titulo = self.cleaned_data['titulo']
         if len(titulo) < 3:
-            raise ValidationError("El título debe tener al menos 3 caracteres.")
+            raise forms.ValidationError("El título debe tener al menos 3 caracteres.")
         return titulo
 
     def clean_descripcion(self):
         descripcion = self.cleaned_data['descripcion']
         if len(descripcion) < 5:
-            raise ValidationError("La descripción debe tener al menos 5 caracteres.")
+            raise forms.ValidationError("La descripción debe tener al menos 5 caracteres.")
         return descripcion
 
     def clean_fecha_limite(self):
         fecha_limite = self.cleaned_data['fecha_limite']
         from datetime import date
         if fecha_limite and fecha_limite < date.today():
-            raise ValidationError("La fecha límite no puede ser anterior a hoy.")
+            raise forms.ValidationError("La fecha límite no puede ser anterior a hoy.")
         return fecha_limite
 
 class MensajeForm(forms.ModelForm):
-    destinatario = forms.ModelChoiceField(queryset=User.objects.none())  # Se llenará dinámicamente
+    destinatario = forms.ModelChoiceField(queryset=User.objects.none())
 
     class Meta:
         model = Mensaje
-        fields = ['destinatario', 'contenido']
+        fields = ['destinatario', 'proyecto', 'contenido']  # Incluimos proyecto como opcional
+        widgets = {
+            'proyecto': forms.Select(attrs={'required': False}),  # No requerido
+        }
 
     def __init__(self, *args, proyecto=None, usuario=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if proyecto and usuario:
-            # Filtra los destinatarios a usuarios asignados al proyecto, excluyendo al remitente
-            self.fields['destinatario'].queryset = proyecto.usuarios_asignados.exclude(id=usuario.id)
-            if not self.fields['destinatario'].queryset.exists():
-                raise ValidationError("No hay usuarios disponibles para enviar mensajes en este proyecto.")
+        if usuario:
+            self.fields['destinatario'].queryset = User.objects.exclude(id=usuario.id)
+        if proyecto:  # Si se pasa un proyecto, limitamos las opciones, pero no es obligatorio
+            self.fields['proyecto'].queryset = Proyecto.objects.filter(usuarios_asignados=usuario)
 
     def clean_contenido(self):
         contenido = self.cleaned_data['contenido']
@@ -111,12 +124,22 @@ class AsignarUsuarioGrupoForm(forms.ModelForm):
         model = PerfilProyecto
         fields = ['usuario', 'rol']
 
+    def __init__(self, *args, proyecto=None, grupo=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proyecto = proyecto
+        self.grupo = grupo
+
     def clean(self):
         cleaned_data = super().clean()
         usuario = cleaned_data.get('usuario')
         rol = cleaned_data.get('rol')
-        if usuario and rol and PerfilProyecto.objects.filter(usuario=usuario, proyecto=self.instance.proyecto, grupo=self.instance.grupo).exists():
-            raise ValidationError("Este usuario ya está asignado a este grupo en el proyecto.")
+        if usuario and rol and self.proyecto and self.grupo:
+            if PerfilProyecto.objects.filter(
+                usuario=usuario, 
+                proyecto=self.proyecto, 
+                grupo=self.grupo
+            ).exists():
+                raise ValidationError("Este usuario ya está asignado a este grupo en el proyecto.")
         return cleaned_data
 
 # (Otros formularios existentes)

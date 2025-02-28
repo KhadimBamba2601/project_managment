@@ -8,6 +8,8 @@
     <style>
         body { background-color: #f8f9fa; }
         .container { margin-top: 50px; }
+        #chatMensajes { max-height: 300px; overflow-y: auto; }
+        .chat-message { margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -24,12 +26,17 @@
                             <a class="nav-link" href="{% url 'lista_proyectos' %}">Proyectos</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'lista_notificaciones' %}">
-                                Notificaciones
+                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#chatModal">Mensajes
                                 {% if notificaciones_no_leidas > 0 %}
                                     <span class="badge bg-danger">{{ notificaciones_no_leidas }}</span>
                                 {% endif %}
                             </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'lista_grupos' %}">Grupos</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'lista_notificaciones' %}">Notificaciones</a>
                         </li>
                         {% if user.is_superuser or is_admin %}
                             <li class="nav-item">
@@ -52,8 +59,134 @@
         </div>
     </nav>
     <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        <!-- Modal de chat -->
+        <div class="modal fade" id="chatModal" tabindex="-1" aria-labelledby="chatModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="chatModalLabel">Chat Privado</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="chatMensajes" class="mb-3">
+                            <p>Cargando mensajes...</p>
+                        </div>
+                        <form id="chatForm" method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <select id="chatDestinatario" name="destinatario" class="form-select" required>
+                                    <option value="">Selecciona un destinatario</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <select id="chatProyecto" name="proyecto" class="form-select">
+                                    <option value="">Sin proyecto (opcional)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <textarea id="chatContenido" name="contenido" class="form-control" rows="3" placeholder="Escribe tu mensaje..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Enviar</button>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <a href="{% url 'bandeja_entrada' %}" class="btn btn-primary">Ver Bandeja Completa</a>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% block content %}{% endblock %}
     </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function() {
+            let currentDestinatario = null;
+    
+            // Cargar mensajes y opciones al abrir el modal
+            $('#chatModal').on('show.bs.modal', function () {
+                $.ajax({
+                    url: "{% url 'bandeja_entrada_json' %}",
+                    method: 'GET',
+                    success: function(data) {
+                        let mensajesHtml = '';
+                        if (data.mensajes_recibidos.length > 0) {
+                            data.mensajes_recibidos.forEach(function(mensaje) {
+                                mensajesHtml += `
+                                    <div class="chat-message">
+                                        <strong>De:</strong> ${mensaje.remitente} <br>
+                                        ${mensaje.proyecto ? '<strong>Proyecto:</strong> ' + mensaje.proyecto + '<br>' : ''}
+                                        ${mensaje.contenido} <br>
+                                        <small>${mensaje.fecha_hora}</small>
+                                    </div>`;
+                            });
+                        } else {
+                            mensajesHtml = '<p>No hay mensajes recibidos.</p>';
+                        }
+                        $('#chatMensajes').html(mensajesHtml);
+    
+                        let destinatariosHtml = '<option value="">Selecciona un destinatario</option>';
+                        data.usuarios.forEach(function(usuario) {
+                            destinatariosHtml += `<option value="${usuario.id}">${usuario.username}</option>`;
+                        });
+                        $('#chatDestinatario').html(destinatariosHtml);
+    
+                        let proyectosHtml = '<option value="">Sin proyecto (opcional)</option>';
+                        data.proyectos.forEach(function(proyecto) {
+                            proyectosHtml += `<option value="${proyecto.id}">${proyecto.titulo}</option>`;
+                        });
+                        $('#chatProyecto').html(proyectosHtml);
+    
+                        // Actualizar el contador de notificaciones en la barra
+                        let badge = $('.navbar .badge.bg-danger');
+                        if (badge.length && parseInt(badge.text()) > 0) {
+                            badge.text('0').hide();  // Ocultar si no hay notificaciones
+                        }
+                    },
+                    error: function() {
+                        $('#chatMensajes').html('<p>Error al cargar los mensajes.</p>');
+                    }
+                });
+            });
+    
+            // Enviar mensaje con AJAX
+            $('#chatForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: "{% url 'enviar_mensaje_chat' %}",
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#chatContenido').val('');
+                            let nuevoMensaje = `
+                                <div class="chat-message">
+                                    <strong>Para:</strong> ${$('#chatDestinatario option:selected').text()} <br>
+                                    ${$('#chatProyecto').val() ? '<strong>Proyecto:</strong> ' + $('#chatProyecto option:selected').text() + '<br>' : ''}
+                                    ${response.contenido} <br>
+                                    <small>${response.fecha_hora}</small>
+                                </div>`;
+                            $('#chatMensajes').append(nuevoMensaje);
+                            $('#chatMensajes').scrollTop($('#chatMensajes')[0].scrollHeight);
+                        } else {
+                            alert('Error al enviar el mensaje: ' + response.error);
+                        }
+                    },
+                    error: function() {
+                        alert('Error al enviar el mensaje.');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

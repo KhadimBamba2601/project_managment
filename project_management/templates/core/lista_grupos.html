@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Lista de Grupos{% endblock %}
+{% block content %}
+    <h1 class="text-center mb-4">Mis Grupos</h1>
+    <div class="container">
+        <div class="row">
+            {% for grupo in grupos %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ grupo.nombre }}</h5>
+                            <p class="card-text">
+                                <strong>Proyecto:</strong> {{ grupo.proyecto.titulo|default:"Sin proyecto" }}<br>
+                                <strong>Miembros:</strong><br>
+                                {% for perfil in grupo.usuarios %}
+                                    {{ perfil.usuario.username }} ({{ perfil.rol }})<br>
+                                {% empty %}
+                                    Sin miembros
+                                {% endfor %}
+                            </p>
+                            <a href="{% url 'gestionar_grupos' grupo.proyecto.id %}" class="btn btn-outline-success btn-sm">Gestionar</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">No perteneces a ningún grupo.</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

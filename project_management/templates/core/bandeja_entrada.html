@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Bandeja de Entrada{% endblock %}
+{% block content %}
+    <h1 class="text-center mb-4">Bandeja de Entrada</h1>
+    <div class="container">
+        <h3>Mensajes Recibidos</h3>
+        <div class="row">
+            {% for mensaje in mensajes_recibidos %}
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <p><strong>De:</strong> {{ mensaje.remitente }} <br>
+                               <strong>Proyecto:</strong> {{ mensaje.proyecto.titulo }} <br>
+                               {{ mensaje.contenido }}</p>
+                            <small class="text-muted">{{ mensaje.fecha_hora }}</small>
+                            <a href="{% url 'responder_mensaje' mensaje.id %}" class="btn btn-outline-primary btn-sm">Responder</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">No hay mensajes recibidos.</div>
+                </div>
+            {% endfor %}
+        </div>
+        <h3>Mensajes Enviados</h3>
+        <div class="row">
+            {% for mensaje in mensajes_enviados %}
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <p><strong>Para:</strong> {{ mensaje.destinatario }} <br>
+                               <strong>Proyecto:</strong> {{ mensaje.proyecto.titulo }} <br>
+                               {{ mensaje.contenido }}</p>
+                            <small class="text-muted">{{ mensaje.fecha_hora }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">No hay mensajes enviados.</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

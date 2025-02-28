@@ -1,36 +1,36 @@
 {% extends 'base.html' %}
-
 {% block title %}Grupos en {{ proyecto.titulo }}{% endblock %}
-
 {% block content %}
     <h1 class="text-center mb-4">Gestionar Grupos en {{ proyecto.titulo }}</h1>
-    <div class="d-flex justify-content-between mb-3">
-        <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary">Volver a Proyectos</a>
-    </div>
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5>Crear Grupo</h5>
-            <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="btn btn-primary">Crear</button>
-            </form>
+    <div class="container">
+        <div class="d-flex justify-content-between mb-3">
+            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary">Volver a Proyectos</a>
         </div>
-    </div>
-    <div class="row">
-        {% for grupo in grupos %}
-            <div class="col-md-4 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ grupo.nombre }}</h5>
-                        <a href="{% url 'asignar_usuario_grupo' proyecto.id grupo.id %}" class="btn btn-outline-primary btn-sm">Asignar Usuarios</a>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>Crear Grupo</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary">Crear</button>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            {% for grupo in grupos %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ grupo.nombre }}</h5>
+                            <a href="{% url 'asignar_usuario_grupo' proyecto.id grupo.id %}" class="btn btn-outline-primary btn-sm">Asignar Usuarios</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% empty %}
-            <div class="col-12">
-                <div class="alert alert-info">No hay grupos en este proyecto.</div>
-            </div>
-        {% endfor %}
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">No hay grupos en este proyecto.</div>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 {% endblock %}

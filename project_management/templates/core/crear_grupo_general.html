@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Editar {{ tarea.titulo }}{% endblock %}
+{% block title %}Crear Nuevo Grupo{% endblock %}
 {% block content %}
-    <h1 class="text-center mb-4">Editar {{ tarea.titulo }}</h1>
+    <h1 class="text-center mb-4">Crear Nuevo Grupo</h1>
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
@@ -10,8 +10,8 @@
                         {% csrf_token %}
                         {{ form.as_p }}
                         <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-success">Guardar Cambios</button>
-                            <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-secondary">Volver</a>
+                            <button type="submit" class="btn btn-success">Crear Grupo</button>
+                            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary">Volver</a>
                         </div>
                     </form>
                 </div>

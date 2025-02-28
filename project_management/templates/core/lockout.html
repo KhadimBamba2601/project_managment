@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Cuenta Bloqueada{% endblock %}
+{% block content %}
+    <div class="container">
+        <h1 class="text-center mb-4">Cuenta Bloqueada</h1>
+        <div class="alert alert-danger text-center">
+            <p>Tu cuenta ha sido bloqueada debido a demasiados intentos fallidos de inicio de sesión.</p>
+            <p>Por favor, espera {{ cooloff_time }} hora(s) antes de intentar de nuevo.</p>
+        </div>
+        <div class="text-center">
+            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary">Volver</a>
+        </div>
+    </div>
+{% endblock %}

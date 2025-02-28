@@ -1,17 +1,35 @@
 {% extends 'base.html' %}
-
 {% block title %}Asignar Usuarios a {{ grupo.nombre }}{% endblock %}
-
 {% block content %}
-    <div style="max-width: 600px; margin-left: auto; margin-right: auto;">
-        <h1 class="text-center mb-4">Asignar Usuarios a {{ grupo.nombre }}</h1>
-        <form method="post" class="card p-4 shadow-sm">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <div class="d-flex justify-content-between">
-                <button type="submit" class="btn btn-success">Asignar</button>
-                <a href="{% url 'gestionar_grupos' proyecto.id %}" class="btn btn-secondary">Volver</a>
+    <h1 class="text-center mb-4">Asignar Usuarios a {{ grupo.nombre }}</h1>
+    <div class="container">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>Miembros actuales</h5>
+                {% if usuarios_actuales %}
+                    <ul class="list-group">
+                        {% for perfil in usuarios_actuales %}
+                            <li class="list-group-item">{{ perfil.usuario.username }} ({{ perfil.rol }})</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No hay miembros en este grupo.</p>
+                {% endif %}
             </div>
-        </form>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card p-4 shadow-sm">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success">Asignar</button>
+                            <a href="{% url 'gestionar_grupos' proyecto.id %}" class="btn btn-secondary">Volver</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}
