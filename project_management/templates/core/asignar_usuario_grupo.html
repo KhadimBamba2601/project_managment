@@ -24,8 +24,8 @@
                         {% csrf_token %}
                         {{ form.as_p }}
                         <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-success">Asignar</button>
-                            <a href="{% url 'gestionar_grupos' proyecto.id %}" class="btn btn-secondary">Volver</a>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-user-plus"></i> Asignar</button>
+                            <a href="{% url 'gestionar_grupos' %}" class="btn btn-secondary">Volver</a>
                         </div>
                     </form>
                 </div>

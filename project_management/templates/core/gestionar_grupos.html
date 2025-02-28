@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
-{% block title %}Grupos en {{ proyecto.titulo }}{% endblock %}
+{% block title %}Gestionar Todos los Grupos{% endblock %}
 {% block content %}
-    <h1 class="text-center mb-4">Gestionar Grupos en {{ proyecto.titulo }}</h1>
+    <h1 class="text-center mb-4">Gestionar Todos los Grupos</h1>
     <div class="container">
         <div class="d-flex justify-content-between mb-3">
-            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary">Volver a Proyectos</a>
+            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver a Proyectos</a>
         </div>
         <div class="card mb-4">
             <div class="card-body">
-                <h5>Crear Grupo</h5>
+                <h5>Crear Nuevo Grupo</h5>
                 <form method="post">
                     {% csrf_token %}
                     {{ form.as_p }}
-                    <button type="submit" class="btn btn-primary">Crear</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Crear</button>
                 </form>
             </div>
         </div>
@@ -22,13 +22,26 @@
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title">{{ grupo.nombre }}</h5>
-                            <a href="{% url 'asignar_usuario_grupo' proyecto.id grupo.id %}" class="btn btn-outline-primary btn-sm">Asignar Usuarios</a>
+                            <p class="card-text">
+                                <strong>Proyecto:</strong> {{ grupo.proyecto.titulo|default:"Sin proyecto" }}<br>
+                                <strong>Miembros:</strong><br>
+                                {% for perfil in grupo.usuarios %}
+                                    {{ perfil.usuario.username }} ({{ perfil.rol }})<br>
+                                {% empty %}
+                                    Sin miembros
+                                {% endfor %}
+                            </p>
+                            {% if grupo.proyecto %}
+                                <a href="{% url 'asignar_usuario_grupo' grupo.proyecto.id grupo.id %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-user-plus"></i> Asignar Usuarios</a>
+                            {% else %}
+                                <span class="text-muted">Asignar usuarios requiere un proyecto</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             {% empty %}
                 <div class="col-12">
-                    <div class="alert alert-info">No hay grupos en este proyecto.</div>
+                    <div class="alert alert-info text-center">No hay grupos creados.</div>
                 </div>
             {% endfor %}
         </div>

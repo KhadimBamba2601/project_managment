@@ -5,17 +5,45 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
-                <div class="card p-4 shadow-sm">
+                <div class="card p-4 shadow-sm mb-4">
                     <form method="post">
                         {% csrf_token %}
                         {{ form.as_p }}
                         <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-success">Crear Grupo</button>
-                            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary">Volver</a>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Crear Grupo</button>
+                            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
                         </div>
                     </form>
                 </div>
             </div>
+        </div>
+        <h2 class="text-center mb-3">Mis Grupos</h2>
+        <div class="row">
+            {% for grupo in grupos %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ grupo.nombre }}</h5>
+                            <p class="card-text">
+                                <strong>Proyecto:</strong> {{ grupo.proyecto.titulo|default:"Sin proyecto" }}<br>
+                                <strong>Miembros:</strong><br>
+                                {% for perfil in grupo.usuarios %}
+                                    {{ perfil.usuario.username }} ({{ perfil.rol }})<br>
+                                {% empty %}
+                                    Sin miembros
+                                {% endfor %}
+                            </p>
+                            {% if grupo.proyecto %}
+                                <a href="{% url 'gestionar_grupos' %}" class="btn btn-outline-success btn-sm"><i class="fas fa-users-cog"></i> Gestionar</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">No perteneces a ningún grupo.</div>
+                </div>
+            {% endfor %}
         </div>
     </div>
 {% endblock %}

@@ -4,6 +4,9 @@ from django.contrib.auth.forms import UserCreationForm
 from django.utils.translation import gettext_lazy as _
 from .models import Proyecto, Tarea, Mensaje, Comentario, User, Grupo, PerfilProyecto
 
+from django import forms
+from .models import Proyecto, Grupo
+
 class ProyectoForm(forms.ModelForm):
     grupos = forms.ModelMultipleChoiceField(
         queryset=Grupo.objects.all(),
@@ -20,6 +23,13 @@ class ProyectoForm(forms.ModelForm):
             'fecha_inicio': forms.DateInput(attrs={'type': 'date'}),
             'fecha_fin': forms.DateInput(attrs={'type': 'date'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.initial['grupos'] = Grupo.objects.filter(proyecto=self.instance)
+            self.initial['fecha_inicio'] = self.instance.fecha_inicio
+            self.initial['fecha_fin'] = self.instance.fecha_fin
 
     def clean(self):
         cleaned_data = super().clean()

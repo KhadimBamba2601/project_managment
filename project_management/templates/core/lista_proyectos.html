@@ -8,8 +8,8 @@
         </div>
     {% endif %}
     <div class="d-flex justify-content-end mb-3">
-        <a href="{% url 'crear_proyecto' %}" class="btn btn-primary me-2">Crear Nuevo Proyecto</a>
-        <a href="{% url 'crear_grupo_general' %}" class="btn btn-primary">Crear Grupo</a>
+        <a href="{% url 'crear_proyecto' %}" class="btn btn-primary me-2"><i class="fas fa-plus"></i> Crear Nuevo Proyecto</a>
+        <a href="{% url 'crear_grupo_general' %}" class="btn btn-primary"><i class="fas fa-users"></i> Crear Grupo</a>
     </div>
     <div class="row">
         {% for proyecto in proyectos %}
@@ -27,10 +27,9 @@
                                 Ningún grupo asignado
                             {% endfor %}
                         </p>
-                        <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-outline-secondary btn-sm">Ver Tareas</a>
-                        <a href="{% url 'editar_proyecto' proyecto.id %}" class="btn btn-outline-warning btn-sm">Editar</a>
-                        <a href="{% url 'mensajes_proyecto' proyecto.id %}" class="btn btn-outline-info btn-sm">Mensajes</a>
-                        <a href="{% url 'eliminar_proyecto' proyecto.id %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+                        <a href="{% url 'lista_tareas' proyecto.id %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-tasks"></i> Ver Tareas</a>
+                        <a href="{% url 'editar_proyecto' proyecto.id %}" class="btn btn-outline-warning btn-sm"><i class="fas fa-edit"></i> Editar</a>
+                        <a href="{% url 'eliminar_proyecto' proyecto.id %}" class="btn btn-outline-danger btn-sm"><i class="fas fa-trash"></i> Eliminar</a>
                     </div>
                 </div>
             </div>

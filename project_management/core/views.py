@@ -147,22 +147,41 @@ def crear_tarea(request, proyecto_id):
 @login_required
 def editar_proyecto(request, proyecto_id):
     """Edita un proyecto existente, restringido a administradores, creadores o superusuarios."""
-    proyecto = get_object_or_404(
-        Proyecto.objects.filter(grupos__miembros=request.user), 
-        id=proyecto_id
-    )
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
     es_admin = PerfilProyecto.objects.filter(
         usuario=request.user, proyecto=proyecto, rol='administrador'
     ).exists()
     es_creador = proyecto.creado_por == request.user
     es_superusuario = request.user.is_superuser
-    if not (es_admin or es_creador or es_superusuario):
+    pertenece_al_proyecto = Grupo.objects.filter(
+        proyecto=proyecto, miembros=request.user
+    ).exists()
+    if not (es_admin or es_creador or es_superusuario or pertenece_al_proyecto):
         messages.warning(request, "No tienes permiso para editar este proyecto.")
         return redirect('lista_proyectos')
+    
     if request.method == 'POST':
         form = ProyectoForm(request.POST, instance=proyecto)
         if form.is_valid():
-            form.save()
+            proyecto = form.save(commit=False)
+            proyecto.fecha_inicio = form.cleaned_data['fecha_inicio']
+            proyecto.fecha_fin = form.cleaned_data['fecha_fin']
+            proyecto.save()
+
+            # Obtener los grupos seleccionados en el formulario
+            nuevos_grupos = form.cleaned_data['grupos']
+            # Obtener los grupos actuales del proyecto
+            grupos_actuales = Grupo.objects.filter(proyecto=proyecto)
+            # Desasignar grupos que ya no están seleccionados
+            for grupo in grupos_actuales:
+                if grupo not in nuevos_grupos:
+                    grupo.proyecto = None
+                    grupo.save()
+            # Asignar los nuevos grupos seleccionados
+            for grupo in nuevos_grupos:
+                if grupo.proyecto != proyecto:
+                    grupo.proyecto = proyecto
+                    grupo.save()
             messages.success(request, f"Proyecto '{proyecto.titulo}' actualizado exitosamente.")
             return redirect('lista_proyectos')
         else:
@@ -279,68 +298,55 @@ def comentarios_tarea(request, proyecto_id, tarea_id):
 
 # Vista para gestionar grupos en un proyecto
 @login_required
-def gestionar_grupos(request, proyecto_id):
-    """Permite a administradores crear y listar grupos en un proyecto."""
-    proyecto = get_object_or_404(
-        Proyecto.objects.filter(grupos__miembros=request.user), 
-        id=proyecto_id
-    )
-    es_admin = PerfilProyecto.objects.filter(
-        usuario=request.user, proyecto=proyecto, rol='administrador'
-    ).exists()
-    es_superusuario = request.user.is_superuser
-    if not (es_admin or es_superusuario):
-        messages.warning(request, "No tienes permiso para gestionar grupos en este proyecto.")
-        return redirect('lista_proyectos')
+@user_passes_test(es_admin_o_superusuario, login_url='lista_proyectos')
+def gestionar_grupos(request):
+    """Permite a administradores gestionar todos los grupos del sistema."""
+    grupos = Grupo.objects.all().select_related('proyecto')
+    # Obtener los usuarios de cada grupo
+    for grupo in grupos:
+        grupo.usuarios = PerfilProyecto.objects.filter(grupo=grupo).select_related('usuario')
     
-    grupos = Grupo.objects.filter(proyecto=proyecto)
     if request.method == 'POST':
         form = GrupoForm(request.POST)
         if form.is_valid():
             grupo = form.save(commit=False)
-            grupo.proyecto = proyecto
-            grupo.save()
+            grupo.save()  # Proyecto es opcional, se asignará en otro momento si es necesario
             messages.success(request, f"Grupo '{grupo.nombre}' creado exitosamente.")
-            return redirect('gestionar_grupos', proyecto_id=proyecto.id)
+            return redirect('gestionar_grupos')
         else:
             messages.error(request, "Error al crear el grupo. Verifica el nombre.")
     else:
         form = GrupoForm()
-    return render(request, 'core/gestionar_grupos.html', {
-        'proyecto': proyecto, 
-        'grupos': grupos, 
-        'form': form
-    })
+    return render(request, 'core/gestionar_grupos.html', {'grupos': grupos, 'form': form})
 
 # Vista para asignar usuarios a un grupo
 @login_required
 def asignar_usuario_grupo(request, proyecto_id, grupo_id):
-    """Asigna usuarios a un grupo dentro de un proyecto y muestra los miembros actuales."""
-    proyecto = get_object_or_404(
-        Proyecto.objects.filter(grupos__miembros=request.user), 
-        id=proyecto_id
+    """Asigna usuarios a un grupo dentro de un proyecto."""
+    # Permitir grupos sin proyecto asociado en la URL, pero validar si existe
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id) if proyecto_id else None
+    grupo = get_object_or_404(Grupo, id=grupo_id)
+    es_admin = request.user.is_superuser or (
+        proyecto and PerfilProyecto.objects.filter(
+            usuario=request.user, proyecto=proyecto, rol='administrador'
+        ).exists()
     )
-    grupo = get_object_or_404(Grupo, id=grupo_id, proyecto=proyecto)
-    es_admin = PerfilProyecto.objects.filter(
-        usuario=request.user, proyecto=proyecto, rol='administrador'
-    ).exists()
     if not es_admin:
         messages.warning(request, "No tienes permiso para asignar usuarios a este grupo.")
-        return redirect('gestionar_grupos', proyecto_id=proyecto.id)
+        return redirect('gestionar_grupos')
     
-    # Obtener los usuarios actuales del grupo
     usuarios_actuales = PerfilProyecto.objects.filter(grupo=grupo).select_related('usuario')
     
     if request.method == 'POST':
         form = AsignarUsuarioGrupoForm(request.POST, proyecto=proyecto, grupo=grupo)
         if form.is_valid():
             perfil = form.save(commit=False)
-            perfil.proyecto = proyecto
+            perfil.proyecto = proyecto  # Puede ser None si no hay proyecto
             perfil.grupo = grupo
             perfil.save()
             grupo.miembros.add(perfil.usuario)
             messages.success(request, f"Usuario '{perfil.usuario.username}' asignado al grupo '{grupo.nombre}'.")
-            return redirect('gestionar_grupos', proyecto_id=proyecto.id)
+            return redirect('gestionar_grupos')
         else:
             messages.error(request, "Error al asignar el usuario. Verifica los datos.")
     else:
@@ -527,24 +533,28 @@ def enviar_mensaje_chat(request):
 
 @login_required
 def crear_grupo_general(request):
-    """Crea un grupo general que puede asociarse a proyectos posteriormente."""
+    """Crea un grupo general y muestra todos los grupos del usuario."""
     if request.method == 'POST':
         form = GrupoForm(request.POST)
         if form.is_valid():
             grupo = form.save(commit=False)
-            grupo.save()  # No asignamos proyecto aquí; será opcional
+            grupo.save()
             messages.success(request, f"Grupo '{grupo.nombre}' creado exitosamente.")
             return redirect('lista_proyectos')
         else:
             messages.error(request, "Error al crear el grupo. Verifica el nombre.")
     else:
         form = GrupoForm()
-    return render(request, 'core/crear_grupo_general.html', {'form': form})
+    # Obtener todos los grupos del usuario
+    grupos = Grupo.objects.filter(miembros=request.user).select_related('proyecto')
+    for grupo in grupos:
+        grupo.usuarios = PerfilProyecto.objects.filter(grupo=grupo).select_related('usuario')
+    return render(request, 'core/crear_grupo_general.html', {'form': form, 'grupos': grupos})
 
 @login_required
 def lista_grupos(request):
-    """Muestra todos los grupos a los que pertenece el usuario con sus miembros."""
-    grupos = Grupo.objects.filter(miembros=request.user).select_related('proyecto')
+    """Muestra todos los grupos existentes con sus miembros."""
+    grupos = Grupo.objects.all().select_related('proyecto')
     # Obtener los usuarios de cada grupo a través de PerfilProyecto
     for grupo in grupos:
         grupo.usuarios = PerfilProyecto.objects.filter(grupo=grupo).select_related('usuario')

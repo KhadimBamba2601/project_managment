@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Lista de Grupos{% endblock %}
 {% block content %}
-    <h1 class="text-center mb-4">Mis Grupos</h1>
+    <h1 class="text-center mb-4">Todos los Grupos</h1>
     <div class="container">
         <div class="row">
             {% for grupo in grupos %}
@@ -18,13 +18,15 @@
                                     Sin miembros
                                 {% endfor %}
                             </p>
-                            <a href="{% url 'gestionar_grupos' grupo.proyecto.id %}" class="btn btn-outline-success btn-sm">Gestionar</a>
+                            {% if grupo.proyecto %}
+                                <a href="{% url 'gestionar_grupos' %}" class="btn btn-outline-success btn-sm"><i class="fas fa-users-cog"></i> Gestionar</a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             {% empty %}
                 <div class="col-12">
-                    <div class="alert alert-info">No perteneces a ningún grupo.</div>
+                    <div class="alert alert-info">No hay grupos creados.</div>
                 </div>
             {% endfor %}
         </div>
