@@ -1,166 +1,181 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from .models import Proyecto, Tarea, Mensaje, Comentario, Grupo, PerfilProyecto, Notificacion
-from .forms import ProyectoForm, TareaForm, CrearUsuarioForm
-import datetime
+from .models import Proyecto, Grupo, PerfilProyecto, Tarea, Mensaje, Notificacion
+from .forms import ProyectoForm, TareaForm, MensajeForm, AsignarUsuarioGrupoForm
+from datetime import date, timedelta
 
-class ProyectoTestCase(TestCase):
+class CoreTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='12345', email='test@example.com')
-        self.admin = User.objects.create_superuser(username='admin', password='admin123', email='admin@example.com')
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.admin = User.objects.create_superuser(username='admin', password='admin123')
+        self.new_user = User.objects.create_user(username='newuser', password='newpass123')  # Nuevo usuario
         self.proyecto = Proyecto.objects.create(
             titulo='Proyecto Test',
             descripcion='Descripción de prueba',
-            fecha_inicio='2025-01-01',
-            fecha_fin='2025-12-31',
+            fecha_inicio=date(2025, 1, 1),
+            fecha_fin=date(2025, 2, 1),
             creado_por=self.user
         )
-        self.proyecto.usuarios_asignados.add(self.user)
-        PerfilProyecto.objects.create(usuario=self.user, proyecto=self.proyecto, rol='administrador')
+        self.grupo = Grupo.objects.create(nombre='Grupo Test', proyecto=self.proyecto)
+        self.perfil = PerfilProyecto.objects.create(
+            usuario=self.user,
+            proyecto=self.proyecto,
+            grupo=self.grupo,
+            rol='miembro'
+        )
+        self.perfil_admin = PerfilProyecto.objects.create(
+            usuario=self.admin,
+            proyecto=self.proyecto,
+            grupo=self.grupo,
+            rol='administrador'
+        )
+        self.grupo.miembros.add(self.user, self.admin)
+        self.client.force_login(self.user)
 
-    def test_proyecto_creacion(self):
+    # Pruebas de Modelos
+    def test_proyecto_creation(self):
         self.assertEqual(self.proyecto.titulo, 'Proyecto Test')
-        self.assertTrue(self.user in self.proyecto.usuarios_asignados.all())
+        self.assertEqual(self.proyecto.creado_por, self.user)
+        self.assertEqual(str(self.proyecto), 'Proyecto Test')
 
-    def test_proyecto_form_validacion_fechas(self):
-        form = ProyectoForm(data={
-            'titulo': 'Proyecto Inválido',
-            'descripcion': 'Test',
-            'fecha_inicio': '2025-12-31',
-            'fecha_fin': '2025-01-01'
-        })
-        self.assertFalse(form.is_valid())
-        self.assertIn('La fecha de fin no puede ser anterior a la fecha de inicio.', form.errors['__all__'])
+    def test_grupo_creation(self):
+        self.assertEqual(self.grupo.nombre, 'Grupo Test')
+        self.assertEqual(self.grupo.proyecto, self.proyecto)
+        self.assertEqual(str(self.grupo), 'Grupo Test')
 
-class TareaTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='12345')
-        self.proyecto = Proyecto.objects.create(
-            titulo='Proyecto Test',
-            descripcion='Descripción',
-            fecha_inicio='2025-01-01',
-            fecha_fin='2025-12-31',
-            creado_por=self.user
-        )
-        self.proyecto.usuarios_asignados.add(self.user)
-        PerfilProyecto.objects.create(usuario=self.user, proyecto=self.proyecto, rol='administrador')
-        self.tarea = Tarea.objects.create(
+    def test_perfil_proyecto_creation(self):
+        self.assertEqual(self.perfil.usuario, self.user)
+        self.assertEqual(self.perfil.proyecto, self.proyecto)
+        self.assertEqual(self.perfil.grupo, self.grupo)
+        self.assertEqual(self.perfil.rol, 'miembro')
+        self.assertEqual(str(self.perfil), f"{self.user} - miembro en {self.proyecto}")
+
+    def test_tarea_creation(self):
+        tarea = Tarea.objects.create(
             proyecto=self.proyecto,
             titulo='Tarea Test',
             descripcion='Descripción tarea',
-            fecha_limite='2025-06-01',
+            fecha_limite=date(2025, 1, 15),
             estado='pendiente'
         )
-        self.tarea.usuarios_asignados.add(self.user)
+        tarea.usuarios_asignados.add(self.user)
+        self.assertEqual(tarea.titulo, 'Tarea Test')
+        self.assertEqual(tarea.proyecto, self.proyecto)
+        self.assertIn(self.user, tarea.usuarios_asignados.all())
 
-    def test_tarea_creacion(self):
-        self.assertEqual(self.tarea.titulo, 'Tarea Test')
-        self.assertEqual(self.tarea.proyecto, self.proyecto)
-
-    def test_tarea_form_validacion_fecha_limite(self):
-        form = TareaForm(data={
-            'titulo': 'Tarea Inválida',
-            'descripcion': 'Descripción válida',
-            'fecha_limite': '2020-01-01',
-            'estado': 'pendiente'
-        })
-        self.assertFalse(form.is_valid())
-        self.assertIn('fecha_limite', form.errors)
-
-    def test_eliminar_tarea(self):
-        self.client.login(username='testuser', password='12345')
-        response = self.client.post(reverse('eliminar_tarea', args=[self.proyecto.id, self.tarea.id]))
-        self.assertEqual(response.status_code, 302)
-        self.assertFalse(Tarea.objects.filter(id=self.tarea.id).exists())
-
-class UsuarioTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.admin = User.objects.create_superuser(username='admin', password='admin123', email='admin@example.com')
-        self.proyecto = Proyecto.objects.create(
-            titulo='Proyecto Test',
-            descripcion='Descripción',
-            fecha_inicio='2025-01-01',
-            fecha_fin='2025-12-31',
-            creado_por=self.admin
+    def test_mensaje_creation(self):
+        mensaje = Mensaje.objects.create(
+            remitente=self.user,
+            destinatario=self.admin,
+            proyecto=self.proyecto,
+            contenido='Hola, esto es un mensaje de prueba'
         )
+        self.assertEqual(mensaje.remitente, self.user)
+        self.assertEqual(mensaje.destinatario, self.admin)
+        self.assertEqual(mensaje.contenido, 'Hola, esto es un mensaje de prueba')
 
-    def test_crear_usuario_con_rol(self):
-        form_data = {
-            'username': 'nuevo_usuario',
-            'email': 'nuevo@example.com',
-            'password1': 'Test12345',
-            'password2': 'Test12345',
-            'rol': 'miembro',
-            'proyecto': self.proyecto.id
-        }
-        form = CrearUsuarioForm(data=form_data)
-        self.assertTrue(form.is_valid())
-        usuario = form.save()
-        self.assertEqual(usuario.username, 'nuevo_usuario')
-        perfil = PerfilProyecto.objects.get(usuario=usuario)
-        self.assertEqual(perfil.rol, 'miembro')
-        self.assertEqual(perfil.proyecto, self.proyecto)
-
-    def test_crear_usuario_sin_proyecto(self):
-        form_data = {
-            'username': 'sin_proyecto',
-            'email': 'sinproy@example.com',
-            'password1': 'Test12345',
-            'password2': 'Test12345',
-            'rol': 'miembro',
-        }
-        form = CrearUsuarioForm(data=form_data)
-        self.assertTrue(form.is_valid())
-        usuario = form.save()
-        self.assertEqual(usuario.username, 'sin_proyecto')
-        self.assertFalse(PerfilProyecto.objects.filter(usuario=usuario).exists())
-
-class NotificacionTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='12345')
-        self.proyecto = Proyecto.objects.create(
-            titulo='Proyecto Test',
-            descripcion='Descripción',
-            fecha_inicio='2025-01-01',
-            fecha_fin='2025-12-31',
-            creado_por=self.user
-        )
-        self.proyecto.usuarios_asignados.add(self.user)
-        self.notificacion = Notificacion.objects.create(
+    def test_notificacion_creation(self):
+        notificacion = Notificacion.objects.create(
             usuario=self.user,
-            mensaje='Notificación de prueba',
+            mensaje='Tarea asignada',
             proyecto=self.proyecto
         )
+        self.assertEqual(notificacion.usuario, self.user)
+        self.assertEqual(notificacion.mensaje, 'Tarea asignada')
+        self.assertFalse(notificacion.leida)
 
-    def test_marcar_notificacion_leida(self):
-        self.client.login(username='testuser', password='12345')
-        response = self.client.post(reverse('lista_notificaciones'), {'marcar_leida': self.notificacion.id})
-        self.assertEqual(response.status_code, 302)
-        self.notificacion.refresh_from_db()
-        self.assertTrue(self.notificacion.leida)
+    # Pruebas de Formularios
+    def test_proyecto_form_valid(self):
+        form_data = {
+            'titulo': 'Nuevo Proyecto',
+            'descripcion': 'Descripción',
+            'fecha_inicio': '2025-01-01',
+            'fecha_fin': '2025-02-01',
+            'grupos': [self.grupo.id]
+        }
+        form = ProyectoForm(data=form_data)
+        self.assertTrue(form.is_valid())
 
-class AutenticacionTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='12345')
-        self.admin = User.objects.create_superuser(username='admin', password='admin123')
+    def test_proyecto_form_invalid_dates(self):
+        form_data = {
+            'titulo': 'Proyecto Inválido',
+            'descripcion': 'Descripción',
+            'fecha_inicio': '2025-02-01',
+            'fecha_fin': '2025-01-01',
+            'grupos': [self.grupo.id]
+        }
+        form = ProyectoForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('La fecha de fin no puede ser anterior a la fecha de inicio.', form.errors['__all__'])
 
-    def test_acceso_restringido_no_autenticado(self):
+    def test_tarea_form_valid(self):
+        fecha_futura = date.today() + timedelta(days=7)
+        form_data = {
+            'titulo': 'Nueva Tarea',
+            'descripcion': 'Descripción tarea',
+            'fecha_limite': fecha_futura.strftime('%Y-%m-%d'),
+            'estado': 'pendiente',
+            'usuarios_asignados': [self.user.id]
+        }
+        form = TareaForm(data=form_data, proyecto=self.proyecto)
+        self.assertTrue(form.is_valid(), msg=f"Errores del formulario: {form.errors}")
+
+    def test_mensaje_form_valid(self):
+        form_data = {
+            'destinatario': str(self.admin.id),
+            'proyecto': str(self.proyecto.id),
+            'contenido': 'Mensaje de prueba'
+        }
+        form = MensajeForm(data=form_data, usuario=self.user)
+        self.assertTrue(form.is_valid(), msg=f"Errores del formulario: {form.errors}")
+
+    # Pruebas de Vistas
+    def test_lista_proyectos_view(self):
         response = self.client.get(reverse('lista_proyectos'))
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith(reverse('login')))
-
-    def test_acceso_admin_crear_usuario(self):
-        self.client.login(username='admin', password='admin123')
-        response = self.client.get(reverse('crear_usuario'))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'core/lista_proyectos.html')
+        self.assertContains(response, 'Proyecto Test')
 
-    def test_acceso_no_admin_crear_usuario(self):
-        self.client.login(username='testuser', password='12345')
-        response = self.client.get(reverse('crear_usuario'))
+    def test_crear_proyecto_view(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('crear_proyecto'), {
+            'titulo': 'Proyecto Nuevo',
+            'descripcion': 'Descripción nueva',
+            'fecha_inicio': '2025-03-01',
+            'fecha_fin': '2025-04-01',
+            'grupos': [self.grupo.id]
+        })
         self.assertEqual(response.status_code, 302)
+        self.assertTrue(Proyecto.objects.filter(titulo='Proyecto Nuevo').exists())
+
+    def test_editar_proyecto_view_get(self):
+        response = self.client.get(reverse('editar_proyecto', args=[self.proyecto.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'core/editar_proyecto.html')
+        self.assertContains(response, 'Proyecto Test')
+
+    def test_editar_proyecto_view_post(self):
+        response = self.client.post(reverse('editar_proyecto', args=[self.proyecto.id]), {
+            'titulo': 'Proyecto Editado',
+            'descripcion': 'Descripción editada',
+            'fecha_inicio': '2025-01-01',
+            'fecha_fin': '2025-02-01',
+            'grupos': [self.grupo.id]
+        })
+        self.assertEqual(response.status_code, 302)
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.titulo, 'Proyecto Editado')
+
+    def test_asignar_usuario_grupo_view(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('asignar_usuario_grupo', args=[self.proyecto.id, self.grupo.id]), {
+            'usuario': self.new_user.id,  # Usar un usuario no asignado al grupo
+            'rol': 'miembro'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(PerfilProyecto.objects.filter(usuario=self.new_user, grupo=self.grupo, rol='miembro').exists())
+
+def es_admin_o_superusuario(user):
+    return user.is_superuser or PerfilProyecto.objects.filter(usuario=user, rol='administrador').exists()

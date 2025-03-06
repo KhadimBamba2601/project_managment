@@ -10,8 +10,8 @@
                         {% csrf_token %}
                         {{ form.as_p }}
                         <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-success">Guardar Cambios</button>
-                            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary">Volver</a>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Guardar Cambios</button>
+                            <a href="{% url 'lista_proyectos' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
                         </div>
                     </form>
                 </div>
